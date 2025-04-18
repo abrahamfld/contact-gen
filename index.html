@@ -6,87 +6,134 @@
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         .container { max-width: 800px; margin: 0 auto; }
-        .country-select { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        .controls { margin-bottom: 20px; display: flex; align-items: center; gap: 20px; }
+        .country-select {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Adjusted width for longer labels */
             gap: 10px;
             margin: 20px 0;
+            border: 1px solid #ccc;
+            padding: 15px;
+            border-radius: 5px;
         }
+        .country-select label { display: block; }
         button { padding: 10px 20px; background: #4CAF50; color: white; border: none; cursor: pointer; }
         button:hover { background: #45a049; }
         .downloads { margin-top: 20px; }
+        select { padding: 8px; border-radius: 5px; border: 1px solid #ccc; }
+        input[type="number"] { padding: 8px; border-radius: 5px; border: 1px solid #ccc; width: 80px; }
+        .language-note { font-size: 0.8em; color: #777; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Contact Generator</h1>
-        
-        <div class="country-select">
-            <label><input type="checkbox" value="Ukraine"> Ukraine (+380)</label>
-            <label><input type="checkbox" value="Germany"> Germany (+49)</label>
-            <label><input type="checkbox" value="UK"> UK (+44)</label>
-            <label><input type="checkbox" value="Italy"> Italy (+39)</label>
-            <label><input type="checkbox" value="France"> France (+33)</label>
+
+        <div class="controls">
+            <div>
+                <label for="languageFilter">Filter by Language:</label>
+                <select id="languageFilter">
+                    <option value="">All Languages</option>
+                    <option value="English">English Speaking Country</option>
+                    <option value="Ukrainian">Ukrainian Speaking Country</option>
+                    <option value="German">German Speaking Country</option>
+                    <option value="Italian">Italian Speaking Country</option>
+                    <option value="French">French Speaking Country</option>
+                    <option value="Spanish">Spanish Speaking Country</option>
+                </select>
+            </div>
+            <div>
+                <label for="numContacts">Number of Contacts:</label>
+                <input type="number" id="numContacts" value="500" min="1">
+            </div>
+            <button onclick="generateContacts()">Generate Contacts</button>
         </div>
 
-        <button onclick="generateContacts()">Generate 500 Contacts</button>
-        
+        <div class="country-select">
+            <label><input type="checkbox" value="UK"> United Kingdom (+44) <span class="language-note">(English)</span></label>
+            <label><input type="checkbox" value="United States"> United States (+1) <span class="language-note">(English - De facto)</span></label>
+            <label><input type="checkbox" value="Canada"> Canada (+1) <span class="language-note">(English, French)</span></label>
+            <label><input type="checkbox" value="Australia"> Australia (+61) <span class="language-note">(English)</span></label>
+            <label><input type="checkbox" value="Ireland"> Ireland (+353) <span class="language-note">(English, Irish)</span></label>
+            <label><input type="checkbox" value="Ghana"> Ghana (+233) <span class="language-note">(English - Secondary Official)</span></label>
+            <label><input type="checkbox" value="Nigeria"> Nigeria (+234) <span class="language-note">(English - Official)</span></label>
+            <label><input type="checkbox" value="South Africa"> South Africa (+27) <span class="language-note">(English - Official, among others)</span></label>
+            <label><input type="checkbox" value="Philippines"> Philippines (+63) <span class="language-note">(Filipino, English - Official)</span></label>
+            <label><input type="checkbox" value="Singapore"> Singapore (+65) <span class="language-note">(English, Malay, Mandarin, Tamil - Official)</span></label>
+            <label><input type="checkbox" value="New Zealand"> New Zealand (+64) <span class="language-note">(English, Māori, NZ Sign Language - Official)</span></label>
+            <label><input type="checkbox" value="Ukraine"> Ukraine (+380) <span class="language-note">(Ukrainian)</span></label>
+            <label><input type="checkbox" value="Germany"> Germany (+49) <span class="language-note">(German)</span></label>
+            <label><input type="checkbox" value="Italy"> Italy (+39) <span class="language-note">(Italian)</span></label>
+            <label><input type="checkbox" value="France"> France (+33) <span class="language-note">(French)</span></label>
+            <label><input type="checkbox" value="Spain"> Spain (+34) <span class="language-note">(Spanish)</span></label>
+        </div>
+
         <div class="downloads" id="downloads"></div>
     </div>
 
     <script>
         const countryConfig = {
-            'Ukraine': {
-                code: '+380',
-                operators: ['50', '63', '66', '67', '68', '73', '93', '95', '96', '97', '98', '99']
-            },
-            'Germany': {
-                code: '+49',
-                operators: ['151', '152', '157', '160', '162', '163', '170', '172', '173', '174', '175', '177']
-            },
-            'UK': {
-                code: '+44',
-                operators: ['7700', '7747', '7457', '7520', '7911', '7949', '7955', '7960', '7989']
-            },
-            'Italy': {
-                code: '+39',
-                operators: ['320', '327', '328', '329', '333', '340', '347', '348', '349', '380']
-            },
-            'France': {
-                code: '+33',
-                operators: ['6', '7']
-            }
+            'UK': { code: '+44', operators: ['7700', '7747', '7457', '7520', '7911', '7949', '7955', '7960', '7989'], languages: ['English'] },
+            'United States': { code: '+1', operators: ['201', '202', '203', '205', '206', '207', '208', '209'], languages: ['English'] },
+            'Canada': { code: '+1', operators: ['403', '780', '604', '778', '416', '647', '514', '438'], languages: ['English', 'French'] },
+            'Australia': { code: '+61', operators: ['4'], languages: ['English'] },
+            'Ireland': { code: '+353', operators: ['83', '85', '86', '87', '89'], languages: ['English', 'Irish'] },
+            'Ghana': { code: '+233', operators: ['20', '50', '24', '26', '27'], languages: ['English'] },
+            'Nigeria': { code: '+234', operators: ['80', '81', '90', '70'], languages: ['English'] },
+            'South Africa': { code: '+27', operators: ['71', '72', '73', '74', '76', '78', '79', '81', '82', '83', '84'], languages: ['English'] },
+            'Philippines': { code: '+63', operators: ['9', '8'], languages: ['Filipino', 'English'] },
+            'Singapore': { code: '+65', operators: ['8', '9'], languages: ['English', 'Malay', 'Mandarin', 'Tamil'] },
+            'New Zealand': { code: '+64', operators: ['2'], languages: ['English', 'Māori', 'NZ Sign Language'] },
+            'Ukraine': { code: '+380', operators: ['50', '63', '66', '67', '68', '73', '93', '95', '96', '97', '98', '99'], languages: ['Ukrainian'] },
+            'Germany': { code: '+49', operators: ['151', '152', '157', '160', '162', '163', '170', '172', '173', '174', '175', '177'], languages: ['German'] },
+            'Italy': { code: '+39', operators: ['320', '327', '328', '329', '333', '340', '347', '348', '349', '380'], languages: ['Italian'] },
+            'France': { code: '+33', operators: ['6', '7'], languages: ['French'] },
+            'Spain': { code: '+34', operators: ['6', '7'], languages: ['Spanish'] },
         };
 
         function generatePhoneNumber(country) {
             const config = countryConfig[country];
             const operator = config.operators[Math.floor(Math.random() * config.operators.length)];
-            const remainingDigits = Array.from({length: country === 'France' ? 8 : 9 - operator.length}, 
+            const remainingDigits = Array.from({length: country === 'France' ? 8 : 9 - operator.length},
                 () => Math.floor(Math.random() * 10)).join('');
             return `${config.code}${operator}${remainingDigits}`;
         }
 
         function generateContacts() {
             const selectedCountries = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
-                                        .map(cb => cb.value);
-            if(selectedCountries.length === 0) {
-                alert('Please select at least one country!');
+                                            .map(cb => cb.value);
+            const languageFilter = document.getElementById('languageFilter').value;
+            const numContacts = parseInt(document.getElementById('numContacts').value, 10);
+
+            const filteredCountries = selectedCountries.filter(country => {
+                if (!languageFilter || languageFilter === 'All Languages') {
+                    return true;
+                }
+                const config = countryConfig[country];
+                if (config && config.languages) {
+                    return config.languages.includes(languageFilter);
+                }
+                return false;
+            });
+
+            if(filteredCountries.length === 0) {
+                alert(`Please select at least one country that speaks the selected language.`);
                 return;
             }
 
             const contacts = [];
             const usedNumbers = new Set();
-            
-            while(contacts.length < 500) {
-                const country = selectedCountries[Math.floor(Math.random() * selectedCountries.length)];
+
+            while(contacts.length < numContacts) {
+                const country = filteredCountries[Math.floor(Math.random() * filteredCountries.length)];
                 let phone;
-                
+
                 do {
                     phone = generatePhoneNumber(country);
                 } while(usedNumbers.has(phone));
-                
+
                 usedNumbers.add(phone);
-                
+
                 contacts.push({
                     name: `${country} Contact ${contacts.length + 1}`,
                     phone,
