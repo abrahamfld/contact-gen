@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VCF Contact Splitter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .container {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="file"], input[type="number"], select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            display: block;
+            margin: 20px auto;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+        }
+        .contact-count {
+            font-weight: bold;
+            color: #27ae60;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .success {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        #contactPreview {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 10px;
+            background-color: white;
+        }
+        .contact-item {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .contact-name {
+            font-weight: bold;
+        }
+        .contact-phone {
+            color: #3498db;
+        }
+        .contact-country {
+            color: #e67e22;
+            font-style: italic;
+        }
+        .filter-options {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .filter-option {
+            flex: 1;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .stat-item {
+            text-align: center;
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>VCF Contact Splitter</h1>
+        <p>Upload a VCF file, filter contacts, and select a random subset to create a new VCF file.</p>
+        
+        <div class="form-group">
+            <label for="vcfFile">Upload VCF File:</label>
+            <input type="file" id="vcfFile" accept=".vcf,.vcard" required>
+        </div>
+        
+        <div class="filter-options">
+            <div class="filter-option">
+                <label for="countryFilter">Filter by Country:</label>
+                <select id="countryFilter">
+                    <option value="all">All Countries</option>
+                    <option value="Russia">Russia Only</option>
+                    <option value="Ukraine">Ukraine Only</option>
+                </select>
+            </div>
+            
+            <div class="filter-option">
+                <label for="contactCount">Number of contacts to select:</label>
+                <input type="number" id="contactCount" min="1" value="5">
+            </div>
+        </div>
+        
+        <button id="processBtn" disabled>Process and Download</button>
+        
+        <div id="fileStats" class="stats" style="display: none;">
+            <div class="stat-item">
+                <div>Total Contacts</div>
+                <div class="contact-count" id="totalContacts">0</div>
+            </div>
+            <div class="stat-item">
+                <div>Russia</div>
+                <div class="contact-count" id="russiaContacts">0</div>
+            </div>
+            <div class="stat-item">
+                <div>Ukraine</div>
+                <div class="contact-count" id="ukraineContacts">0</div>
+            </div>
+        </div>
+        
+        <div id="contactPreview"></div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        let parsedContacts = [];
+        
+        document.getElementById('vcfFile').addEventListener('change', handleFileUpload);
+        document.getElementById('processBtn').addEventListener('click', processVCF);
+        document.getElementById('countryFilter').addEventListener('change', updatePreview);
+        
+        function handleFileUpload(event) {
+            const fileInput = event.target;
+            const resultsDiv = document.getElementById('results');
+            const processBtn = document.getElementById('processBtn');
+            
+            resultsDiv.innerHTML = '';
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                processBtn.disabled = true;
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const vcfContent = e.target.result;
+                parsedContacts = parseVCF(vcfContent);
+                
+                if (parsedContacts.length === 0) {
+                    resultsDiv.innerHTML = '<div class="error">No contacts found in the VCF file.</div>';
+                    processBtn.disabled = true;
+                    return;
+                }
+                
+                updateStats();
+                updatePreview();
+                processBtn.disabled = false;
+            };
+            
+            reader.onerror = function() {
+                resultsDiv.innerHTML = '<div class="error">Error reading the file. Please try again.</div>';
+                processBtn.disabled = true;
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        function updateStats() {
+            const totalContacts = parsedContacts.length;
+            const russiaContacts = parsedContacts.filter(c => c.country === 'Russia').length;
+            const ukraineContacts = parsedContacts.filter(c => c.country === 'Ukraine').length;
+            
+            document.getElementById('fileStats').style.display = 'flex';
+            document.getElementById('totalContacts').textContent = totalContacts;
+            document.getElementById('russiaContacts').textContent = russiaContacts;
+            document.getElementById('ukraineContacts').textContent = ukraineContacts;
+        }
+        
+        function updatePreview() {
+            const countryFilter = document.getElementById('countryFilter').value;
+            const previewDiv = document.getElementById('contactPreview');
+            
+            let filteredContacts = parsedContacts;
+            if (countryFilter !== 'all') {
+                filteredContacts = parsedContacts.filter(c => c.country === countryFilter);
+            }
+            
+            previewDiv.innerHTML = '';
+            
+            if (filteredContacts.length === 0) {
+                previewDiv.innerHTML = '<p>No contacts match the selected filter.</p>';
+                return;
+            }
+            
+            // Show first 10 contacts as preview
+            const previewCount = Math.min(10, filteredContacts.length);
+            const previewContacts = filteredContacts.slice(0, previewCount);
+            
+            previewContacts.forEach(contact => {
+                const contactDiv = document.createElement('div');
+                contactDiv.className = 'contact-item';
+                contactDiv.innerHTML = `
+                    <div class="contact-name">${contact.name}</div>
+                    <div class="contact-phone">${contact.phone}</div>
+                    <div class="contact-country">${contact.country}</div>
+                `;
+                previewDiv.appendChild(contactDiv);
+            });
+            
+            if (filteredContacts.length > previewCount) {
+                const moreDiv = document.createElement('div');
+                moreDiv.textContent = `...and ${filteredContacts.length - previewCount} more contacts`;
+                moreDiv.style.textAlign = 'center';
+                moreDiv.style.marginTop = '10px';
+                moreDiv.style.color = '#7f8c8d';
+                previewDiv.appendChild(moreDiv);
+            }
+        }
+        
+        function processVCF() {
+            const contactCountInput = document.getElementById('contactCount');
+            const countryFilter = document.getElementById('countryFilter').value;
+            const resultsDiv = document.getElementById('results');
+            
+            resultsDiv.innerHTML = '';
+            
+            const desiredCount = parseInt(contactCountInput.value);
+            
+            if (isNaN(desiredCount) || desiredCount < 1) {
+                resultsDiv.innerHTML = '<div class="error">Please enter a valid number of contacts.</div>';
+                return;
+            }
+            
+            // Apply country filter
+            let filteredContacts = parsedContacts;
+            if (countryFilter !== 'all') {
+                filteredContacts = parsedContacts.filter(c => c.country === countryFilter);
+            }
+            
+            if (filteredContacts.length === 0) {
+                resultsDiv.innerHTML = '<div class="error">No contacts match the selected filter.</div>';
+                return;
+            }
+            
+            // Select random contacts
+            const selectedContacts = selectRandomContacts(filteredContacts, desiredCount);
+            
+            // Create new VCF content
+            const newVCFContent = createVCF(selectedContacts);
+            
+            // Download the new VCF file
+            const countrySuffix = countryFilter !== 'all' ? `_${countryFilter}` : '';
+            downloadVCF(newVCFContent, `contacts_subset${countrySuffix}.vcf`);
+            
+            // Show results
+            resultsDiv.innerHTML = `
+                <div class="success">Processed successfully!</div>
+                <p>Original contacts: <span class="contact-count">${filteredContacts.length}</span></p>
+                <p>Selected contacts: <span class="contact-count">${selectedContacts.length}</span></p>
+                <p>A new VCF file with the selected contacts has been downloaded.</p>
+            `;
+        }
+        
+        function parseVCF(vcfText) {
+            const contacts = [];
+            const vcfEntries = vcfText.split('BEGIN:VCARD');
+            
+            for (const entry of vcfEntries) {
+                if (entry.trim() === '') continue;
+                
+                const fullEntry = 'BEGIN:VCARD' + entry;
+                if (!fullEntry.includes('END:VCARD')) continue;
+                
+                // Extract name
+                const nameMatch = fullEntry.match(/FN:(.+)/);
+                const name = nameMatch ? nameMatch[1].trim() : 'Unknown';
+                
+                // Extract phone
+                const phoneMatch = fullEntry.match(/TEL[^:]*:([^\r\n]+)/);
+                const phone = phoneMatch ? phoneMatch[1].trim() : '';
+                
+                // Extract country from CATEGORIES
+                const countryMatch = fullEntry.match(/CATEGORIES:([^\r\n]+)/);
+                let country = countryMatch ? countryMatch[1].trim() : '';
+                
+                // Fallback: try to extract country from name if not in CATEGORIES
+                if (!country) {
+                    const nameCountryMatch = name.match(/(Russia|Ukraine)/);
+                    country = nameCountryMatch ? nameCountryMatch[0] : 'Unknown';
+                }
+                
+                contacts.push({
+                    vcf: fullEntry,
+                    name: name,
+                    phone: phone,
+                    country: country
+                });
+            }
+            
+            return contacts;
+        }
+        
+        function selectRandomContacts(contacts, count) {
+            // Don't select more than available
+            const actualCount = Math.min(count, contacts.length);
+            
+            // Shuffle array and pick first n elements
+            const shuffled = [...contacts].sort(() => 0.5 - Math.random());
+            return shuffled.slice(0, actualCount);
+        }
+        
+        function createVCF(contacts) {
+            return contacts.map(c => c.vcf).join('\n');
+        }
+        
+        function downloadVCF(content, filename) {
+            const blob = new Blob([content], { type: 'text/vcard' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            
+            // Cleanup
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 100);
+        }
+    </script>
+</body>
+</html>
