@@ -116,7 +116,62 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container"><!-- Navigation Bar HTML -->
+<nav class="navbar">
+    <a href="/contact-gen" id="home-link">Home</a>
+    <a href="/contact-gen/contact_vcf_spliter" id="vcf-link">VCF Splitter</a>
+</nav>
+
+<!-- CSS for the Navbar -->
+<style>
+    .navbar {
+        background-color: #2c3e50;
+        overflow: hidden;
+        margin-bottom: 20px;
+        border-radius: 4px;
+    }
+    
+    .navbar a {
+        float: left;
+        display: block;
+        color: white;
+        text-align: center;
+        padding: 14px 16px;
+        text-decoration: none;
+        font-size: 17px;
+        transition: background-color 0.3s;
+    }
+    
+    .navbar a:hover {
+        background-color: #3498db;
+    }
+    
+    .navbar a.active {
+        background-color: #3498db;
+    }
+</style>
+
+<!-- JavaScript to highlight current page -->
+<script>
+    // Get current page URL
+    const currentPage = window.location.pathname;
+    
+    // Get navbar links
+    const homeLink = document.getElementById('home-link');
+    const vcfLink = document.getElementById('vcf-link');
+    
+    // Remove active class from both links first
+    homeLink.classList.remove('active');
+    vcfLink.classList.remove('active');
+    
+    // Add active class to current page link
+    if (currentPage === '/contact-gen/contact_vcf_spliter') {
+        vcfLink.classList.add('active');
+    } else {
+        homeLink.classList.add('active');
+    }
+</script>
+        
         <h1>VCF Contact Splitter</h1>
         <p>Upload a VCF file, filter contacts, and select a random subset to create a new VCF file.</p>
         
